@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="4冊の本が並ぶ図書館員タイプ診断のアイコン">
+  <rect width="512" height="512" fill="#f1e6cf"/>
+  <path d="M56 56H126" stroke="#76aa2f" stroke-width="12"/>
+  <path d="M386 456H456" stroke="#35aaa1" stroke-width="12"/>
+  <rect x="88" y="226" width="68" height="142" fill="#ed5140"/>
+  <rect x="176" y="166" width="68" height="202" fill="#f0ad22"/>
+  <rect x="264" y="202" width="68" height="166" fill="#76aa2f"/>
+  <rect x="352" y="126" width="68" height="242" fill="#35aaa1"/>
+  <path d="M104 252H140M192 192H228M280 228H316M368 152H404" stroke="#fffaf0" stroke-width="10"/>
+  <path d="M72 368H440" stroke="#1d1b17" stroke-width="22"/>
+  <path d="M96 402H416" stroke="#ed5140" stroke-width="12"/>
+</svg>
