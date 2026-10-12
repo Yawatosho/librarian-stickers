@@ -49,10 +49,9 @@ if (storageProblem) {
 }
 
 function buildBoard() {
-  $('board').innerHTML = TYPES.map(({type, slug, name}) => `<article class="type-card" id="type-${type}" aria-labelledby="title-${type}">
+  $('board').innerHTML = TYPES.map(({type, slug, name}) => `<article class="type-card" id="type-${type}" aria-label="${name}">
     <div class="card-index"><span>TYPE / ${String(type).padStart(2,'0')}</span><span class="card-count" data-count-type="${type}">— 枚</span></div>
     <img class="type-image" src="assets/result-ogp/${slug}.webp" alt="${name}のキャラクターカード" width="1672" height="941" loading="${type <= 4 ? 'eager' : 'lazy'}" decoding="async">
-    <h3 id="title-${type}">${name}</h3>
     <div class="rating-grid">${Object.entries(RATINGS).map(([rating, label]) => `<div class="rating-column ${rating}"><div class="rating-label" id="label-${type}-${rating}">${label}<span data-count-zone="${type}-${rating}"></span></div><button type="button" class="sticker-zone" data-type="${type}" data-rating="${rating}" aria-pressed="false" aria-label="${name}：${label}の枠に仮置き" aria-describedby="board-help"><span class="zone-hint" aria-hidden="true">＋</span><span class="sticker-layer" aria-hidden="true"></span></button></div>`).join('')}</div>
   </article>`).join('');
 }
