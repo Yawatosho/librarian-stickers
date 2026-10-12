@@ -29,7 +29,9 @@ window.STICKER_CONFIG = Object.freeze({
 
 GASは利用者がGoogleにログインしていなくてもアクセスできる公開設定が必要です。GASを再デプロイしてURLが変わった場合は、ここを変更してコミット・プッシュします。APIキーや署名用秘密鍵はフロントエンドに設定しません。
 
-添付の `sticker-api.js` は **`assets/sticker-api.js` に変更せず組み込んでいます**。一覧は読み取り専用JSONP、書き込みは `text/plain;charset=UTF-8` の `no-cors` POST、結果は `requestId` を使う読み取り専用JSONPで確認します。POST応答をJSONとして読む処理はありません。
+添付の `sticker-api.js` を **`assets/sticker-api.js` に組み込んでいます**。一覧は読み取り専用JSONP、書き込みは `text/plain;charset=UTF-8` の `no-cors` POST、結果は `requestId` を使う読み取り専用JSONPで確認します。POST応答をJSONとして読む処理はありません。
+
+Chromeで複数のGoogleアカウントにログインしている場合の読み込み失敗への対策として、JSONPのscript要素に `crossOrigin = 'anonymous'`、POSTに `credentials: 'omit'` を追加しています。どちらもGoogleのログインCookieを送信しません。公開GASの初回応答と `script.googleusercontent.com` へのリダイレクト後の応答が `Access-Control-Allow-Origin: *` を返すことを実際に確認して、この設定を採用しました。JSONP方式と結果確認の仕組みは維持しています。
 
 ## GitHub Pagesへの公開
 

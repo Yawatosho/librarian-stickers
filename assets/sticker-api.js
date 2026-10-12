@@ -17,6 +17,10 @@
       return new Promise((resolve, reject) => {
         const callback = '__stickerCallback_' + crypto.randomUUID().replace(/-/g, '');
         const script = document.createElement('script');
+        // Don't send Google account cookies with cross-origin JSONP reads.
+        // The deployed GAS and its ContentService redirect return ACAO: *.
+        // This avoids account-selection/login HTML in multi-account browsers.
+        script.crossOrigin = 'anonymous';
         const query = new URLSearchParams({...params, callback, _: Date.now().toString()});
         let finished = false;
         const timer = setTimeout(() => finish(new Error('読み込みがタイムアウトしました。')), timeoutMs);
@@ -59,7 +63,7 @@
       // No CORS-readable POST response. The server writes a short-lived receipt
       // to CacheService, fetched separately via read-only JSONP.
       fetch(this.endpoint, {
-        method: 'POST', mode: 'no-cors', redirect: 'follow',
+        method: 'POST', mode: 'no-cors', credentials: 'omit', redirect: 'follow',
         headers: {'Content-Type': 'text/plain;charset=UTF-8'},
         body: JSON.stringify(payload)
       }).catch(() => { /* poll below determines whether processing succeeded */ });

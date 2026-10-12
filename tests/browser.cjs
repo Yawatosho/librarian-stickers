@@ -25,6 +25,9 @@ async function setShortReceiptTimeout(page) {
 }
 async function mockGas(route) {
   const request = route.request();
+  const headers = await request.allHeaders();
+  // Seeded Google cookies must never be sent, even for JSONP script tags.
+  assert.equal(headers.cookie,undefined);
   if (request.method() === 'POST') {
     const payload = JSON.parse(request.postData());
     assert.equal(request.headers()['content-type'],'text/plain;charset=UTF-8');
@@ -45,10 +48,12 @@ async function mockGas(route) {
   assert.ok(['list','receipt'].includes(action));
   assert.equal(url.searchParams.has('token'),false);
   const data = action === 'list' ? (backend.listError ? {ok:false,error:'テスト用の通信エラー'} : {ok:true,stickers:backend.rows}) : backend.hold ? {state:'pending'} : (backend.receipts.get(url.searchParams.get('requestId')) || {state:'pending'});
-  await route.fulfill({contentType:'application/javascript',body:`${url.searchParams.get('callback')}(${JSON.stringify(data)});`});
+  assert.equal(headers.origin,new URL(base).origin);
+  await route.fulfill({headers:{'Access-Control-Allow-Origin':'*'},contentType:'application/javascript',body:`${url.searchParams.get('callback')}(${JSON.stringify(data)});`});
 }
 async function newContext(browser,options={}) {
   const context = await browser.newContext(options);
+  await context.addCookies([{name:'sticker-test-google-cookie',value:'test-only',domain:'.google.com',path:'/',secure:true,sameSite:'None'}]);
   await context.route('https://script.google.com/**',mockGas);
   context.on('page',page=>page.on('pageerror',err=>failures.push(err.message)));
   return context;
@@ -121,7 +126,7 @@ async function newContext(browser,options={}) {
     const sent = backend.posts.length;
     assert.equal(await p.locator('#confirm').isVisible(),false);
     // Install the short deadline before reload's automatic recovery starts.
-    await c.route('**/assets/sticker-api.js', async route => {
+    await c.route('**/assets/sticker-api.js*', async route => {
       const response = await route.fetch();
       await route.fulfill({response,body:(await response.text()) + '\nconst qaResume = window.StickerApi.prototype.resumeReceipt; window.StickerApi.prototype.resumeReceipt = function(id) { return qaResume.call(this,id,100); };'});
     });
