@@ -3,7 +3,8 @@ import {DemoApi} from './demo-api.js';
 
 const $ = id => document.getElementById(id);
 const config = window.STICKER_CONFIG || {};
-const demo = new URLSearchParams(location.search).get('demo') === '1' || !config.gasUrl;
+const localPreview = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+const demo = localPreview && (new URLSearchParams(location.search).get('demo') === '1' || !config.gasUrl);
 const prefix = demo ? 'librarian-sticker-demo' : 'librarian-sticker';
 const ownKey = `${prefix}-v1`;
 const pendingKey = `${prefix}-pending-v1`;
@@ -37,6 +38,13 @@ try { api = demo ? new DemoApi(storage) : new window.StickerApi(config.gasUrl); 
 catch (err) { storageProblem = err.message; }
 
 document.querySelectorAll('.diagnosis-link').forEach(link => { link.href = config.diagnosisUrl || 'https://yawatosho.github.io/librarian-type/'; });
+if (localPreview) {
+  const link = document.createElement('a');
+  link.id = 'demo-link';
+  link.href = '?demo=1';
+  link.textContent = 'デモで試してみる';
+  document.querySelector('.participation-note').append(link);
+}
 if (demo) {
   $('mode-banner').hidden = false;
   $('mode-banner').textContent = 'デモモード — このブラウザだけで試せます。会場のボードには投稿されません。';

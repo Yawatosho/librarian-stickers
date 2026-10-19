@@ -2,6 +2,7 @@
  * All GAS requests are intercepted. This suite NEVER posts to the deployed GAS.
  * npm install --no-save playwright && npx playwright install chromium
  * Start a local server first; QA_BASE_URL defaults to http://127.0.0.1:43240/.
+ * QA_PUBLIC_ONLY=1 runs only the public demo availability checks.
  */
 const {chromium} = require('playwright');
 const assert = require('node:assert/strict');
@@ -23,7 +24,7 @@ async function setShortReceiptTimeout(page) {
     window.StickerApi.prototype.resumeReceipt = function(id) { return resume.call(this,id,100); };
   });
 }
-async function mockGas(route) {
+async function mockGas(route, expectedOrigin = new URL(base).origin) {
   const request = route.request();
   const headers = await request.allHeaders();
   // Seeded Google cookies must never be sent, even for JSONP script tags.
@@ -48,7 +49,7 @@ async function mockGas(route) {
   assert.ok(['list','receipt'].includes(action));
   assert.equal(url.searchParams.has('token'),false);
   const data = action === 'list' ? (backend.listError ? {ok:false,error:'テスト用の通信エラー'} : {ok:true,stickers:backend.rows}) : backend.hold ? {state:'pending'} : (backend.receipts.get(url.searchParams.get('requestId')) || {state:'pending'});
-  assert.equal(headers.origin,new URL(base).origin);
+  assert.equal(headers.origin,expectedOrigin);
   await route.fulfill({headers:{'Access-Control-Allow-Origin':'*'},contentType:'application/javascript',body:`${url.searchParams.get('callback')}(${JSON.stringify(data)});`});
 }
 async function newContext(browser,options={}) {
@@ -62,6 +63,7 @@ async function newContext(browser,options={}) {
   fs.mkdirSync(path.resolve('test-results'),{recursive:true});
   const browser = await chromium.launch({headless:true, ...(process.env.QA_BROWSER_CHANNEL ? {channel:process.env.QA_BROWSER_CHANNEL} : {})});
   try {
+    if (!process.env.QA_PUBLIC_ONLY) {
     const c = await newContext(browser,{viewport:{width:1440,height:1000}});
     const p = await c.newPage(); await p.goto(base); await ready(p);
     assert.equal(await p.locator('.type-card').count(),16);
@@ -213,6 +215,27 @@ async function newContext(browser,options={}) {
     const pu = await unset.newPage(); await pu.goto(base); await ready(pu);
     assert.ok((await pu.locator('#mode-banner').innerText()).includes('デモモード'));
     console.log('PASS: missing backend displays demo');
+    }
+
+    // Serve the same files on a non-local origin to exercise the public build.
+    const publicOrigin = 'https://stickers.example.test';
+    const publicContext = await newContext(browser);
+    await publicContext.route('https://script.google.com/**', route => mockGas(route, publicOrigin));
+    await publicContext.route(`${publicOrigin}/**`, route => {
+      const pathname = new URL(route.request().url()).pathname;
+      return route.fulfill({path:path.join(__dirname,'..',pathname === '/' ? 'index.html' : pathname.slice(1))});
+    });
+    const publicPage = await publicContext.newPage();
+    await publicPage.goto(`${publicOrigin}/?demo=1`); await ready(publicPage);
+    assert.equal(await publicPage.locator('#demo-link').count(),0);
+    assert.equal(await publicPage.locator('#mode-banner').isVisible(),false);
+    assert.ok((await publicPage.locator('#connection-status').innerText()).startsWith('接続中'));
+    assert.equal(await publicPage.locator('#total-count').innerText(),String(backend.rows.length));
+    await publicContext.route(`${publicOrigin}/config.js`, route => route.fulfill({contentType:'application/javascript',body:'window.STICKER_CONFIG={gasUrl:""}'}));
+    await publicPage.reload(); await publicPage.locator('#mode-banner').waitFor({state:'visible'});
+    assert.ok((await publicPage.locator('#mode-banner').innerText()).includes('GAS の /exec URL'));
+    assert.equal(await publicPage.locator('#demo-link').count(),0);
+    console.log('PASS: public page has no demo entry, ignores demo query, and never falls back to demo');
     assert.deepEqual(failures,[]);
     console.log('All browser checks passed. No production writes were made.');
   } finally { await browser.close(); }
